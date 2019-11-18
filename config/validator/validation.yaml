@@ -1,0 +1,17 @@
+App\Entity\ProductData:
+  properties:
+    strProductName:
+      - NotBlank: ~
+    strProductDesc:
+      - NotBlank: ~
+    strProductCode:
+      - NotBlank: ~
+      - Length:
+          max: 10
+    stock:
+      - NotBlank: ~
+      - GreaterThan: 9
+    cost:
+      - NotBlank: ~
+      - GreaterThan: 4
+      - LessThan: 1001
