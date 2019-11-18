@@ -4,8 +4,8 @@ namespace App\Command;
 
 use App\Command\ImportStrategies\CsvProductImport;
 use App\Command\ImportStrategies\ProductImport;
-use App\Entity\ProductData;
 use App\Exception\ProductDataImportException;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,14 +21,21 @@ class ImportProductsCommand extends Command
     /** @var ProductImport $import */
     protected $import;
 
+    /** @var EntityManagerInterface $entityManager */
+    protected $entityManager;
+
+    /** @var SymfonyStyle $io */
+    protected $io;
+
     /** @var ValidatorInterface $validator */
     protected $validator;
 
-    public function __construct(ValidatorInterface $validator, string $name = null)
+    public function __construct(ValidatorInterface $validator, EntityManagerInterface $entityManager)
     {
         $this->validator = $validator;
+        $this->entityManager = $entityManager;
 
-        parent::__construct($name);
+        parent::__construct();
     }
 
     protected function configure()
@@ -43,56 +50,78 @@ class ImportProductsCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $this->io = new SymfonyStyle($input, $output);
+
         $path = $input->getArgument('path');
-        $this->import = $this->getProductImporter($input);
+        $format = $input->getOption('format');
+        $testMode = $input->getOption('test');
+
+        $this->import = $this->getProductImporter($format);
 
         if (!$this->import) {
-            $io->error("Unknown file format.");
+            $this->io->error("Unknown file format.");
             return 1;
         }
 
         try {
             $this->import->loadProducts($path);
 
-            $success = count($this->import->getValidatedProducts());
+            $products = $this->import->getValidatedProducts();
+            $success = count($products);
             $skipped = count($this->import->getFailedProducts());
             $failedLines = $this->import->getFailedLines();
-            $total = $success+$skipped+count($failedLines);
+            $total = $success + $skipped + count($failedLines);
 
-            $io->text('Items found: ' . $total);
-            $io->text('Items stored: '. $success);
-            $io->text('Items skipped: ' . $skipped);
+            $this->io->text('Items found: ' . $total);
+            $this->io->text('Items stored: '. $success);
+            $this->io->text('Items skipped: ' . $skipped);
 
-            $this->displayFailedLines($io, $failedLines);
+            $this->displayFailedLines($failedLines);
+
+            $this->saveItems($products, $testMode);
 
             return 0;
         } catch (ProductDataImportException $e) {
-            $io->error(get_class($e).': '.$e->getMessage());
+            $this->io->error(get_class($e).': '.$e->getMessage());
             return 1;
         }
     }
 
+    private function saveItems(array $products, bool $testMode)
+    {
+        if ($testMode) {
+            $this->io->title('Items will not be stored in test mode.');
+            return;
+        }
+
+        foreach ($products as $item) {
+            $this->entityManager->persist($item);
+        }
+
+        $this->entityManager->flush();
+    }
+
     /**
-     * @param SymfonyStyle $io
      * @param array $failedLines
      */
-    private function displayFailedLines(SymfonyStyle $io, array $failedLines)
+    private function displayFailedLines(array $failedLines)
     {
-        $io->title('Failed to parse lines below:');
+        $this->io->title('Failed to parse lines below:');
 
         foreach ($failedLines as $line) {
-            $io->block( implode($failedLines));
+            $this->io->block($line);
         }
     }
 
     /**
-     * @param InputInterface $input
+     * @param string $format
      * @return ProductImport|null
      */
-    private function getProductImporter(InputInterface $input)
+    private function getProductImporter(string $format = null)
     {
-        $format = 'csv';
+        if (!$format) {
+            $format = 'csv';
+        }
 
         switch ($format) {
             case "csv":

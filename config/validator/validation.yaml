@@ -1,4 +1,6 @@
 App\Entity\ProductData:
+  constraints:
+    - Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity: strProductCode
   properties:
     strProductName:
       - NotBlank: ~
