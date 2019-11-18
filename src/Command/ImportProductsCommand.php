@@ -5,22 +5,28 @@ namespace App\Command;
 use App\Command\ImportStrategies\CsvProductImport;
 use App\Command\ImportStrategies\ProductImport;
 use App\Entity\ProductData;
+use App\Exception\ProductDataImportException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class ImportProductsCommand extends Command
 {
     protected static $defaultName = 'import:products';
 
+    /** @var ProductImport $import */
     protected $import;
 
-    public function __construct(ProductImport $import, string $name = null)
+    /** @var ValidatorInterface $validator */
+    protected $validator;
+
+    public function __construct(ValidatorInterface $validator, string $name = null)
     {
-        $this->import = $import;
+        $this->validator = $validator;
 
         parent::__construct($name);
     }
@@ -38,10 +44,7 @@ class ImportProductsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $path = $input->getArgument('path');
-
-        if ($format = $input->getOption('format')) {
-            $this->import = $this->getProductImporter($format);
-        }
+        $this->import = $this->getProductImporter($input);
 
         if (!$this->import) {
             $io->error("Unknown file format.");
@@ -50,23 +53,49 @@ class ImportProductsCommand extends Command
 
         try {
             $this->import->loadProducts($path);
-        } catch (\App\Exception\ProductDataImportException $e) {
+
+            $success = count($this->import->getValidatedProducts());
+            $skipped = count($this->import->getFailedProducts());
+            $failedLines = $this->import->getFailedLines();
+            $total = $success+$skipped+count($failedLines);
+
+            $io->text('Items found: ' . $total);
+            $io->text('Items stored: '. $success);
+            $io->text('Items skipped: ' . $skipped);
+
+            $this->displayFailedLines($io, $failedLines);
+
+            return 0;
+        } catch (ProductDataImportException $e) {
             $io->error(get_class($e).': '.$e->getMessage());
             return 1;
         }
-
-        return 0;
     }
 
     /**
-     * @param string $format
-     * @return CsvProductImport|null
+     * @param SymfonyStyle $io
+     * @param array $failedLines
      */
-    public function getProductImporter(string $format)
+    private function displayFailedLines(SymfonyStyle $io, array $failedLines)
     {
+        $io->title('Failed to parse below lines:');
+
+        foreach ($failedLines as $line) {
+            $io->block( implode($failedLines));
+        }
+    }
+
+    /**
+     * @param InputInterface $input
+     * @return ProductImport|null
+     */
+    private function getProductImporter(InputInterface $input)
+    {
+        $format = 'csv';
+
         switch ($format) {
             case "csv":
-                return new CsvProductImport();
+                return new CsvProductImport($this->validator);
             default:
                 return null;
         }

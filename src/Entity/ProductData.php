@@ -3,6 +3,9 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Mapping\ClassMetadata;
 
 /**
  * @ORM\Table(uniqueConstraints={@ORM\UniqueConstraint(name="strProductCode", columns={"strProductCode"})})
@@ -43,9 +46,49 @@ class ProductData
     private $dtmDiscontinued;
 
     /**
+     * @ORM\Column(type="integer", nullable=true)
+     */
+    private $stock;
+
+    /**
+     * @ORM\Column(type="float", nullable=true)
+     */
+    private $cost;
+
+    public function getCost()
+    {
+        return $this->cost;
+    }
+
+    public function setCost($cost): void
+    {
+        $this->cost = (float)$cost;
+    }
+
+    public function getStock()
+    {
+        return $this->stock;
+    }
+
+    public function setStock($stock): void
+    {
+        $this->stock = (int)$stock;
+    }
+
+    /**
      * @ORM\Column(type="datetime", nullable=false, options={"default"="current_timestamp()"})
      */
     private $stmTimestamp;
+
+    public function createFromArray(array $data)
+    {
+        foreach ($data as $property => $value) {
+            $method = sprintf('set%s', ucwords($property));
+            $this->$method($value);
+        }
+
+        return $this;
+    }
 
     public function getIntProductDataId(): ?int
     {
@@ -105,9 +148,9 @@ class ProductData
         return $this->dtmDiscontinued;
     }
 
-    public function setDtmDiscontinued(?\DateTimeInterface $dtmDiscontinued): self
+    public function setDtmDiscontinued($dtmDiscontinued = null): self
     {
-        $this->dtmDiscontinued = $dtmDiscontinued;
+        $this->dtmDiscontinued = $dtmDiscontinued == 'yes' ? new \DateTime() : null;
 
         return $this;
     }
