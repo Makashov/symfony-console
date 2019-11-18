@@ -84,7 +84,7 @@ class CsvProductImport implements ProductImport
             $productArray = $this->parseLine($line);
 
             if (!$productArray) {
-                $this->failedLines []= $file->getCurrentLine(); // Save line number with broken item.
+                $this->failedLines []= $file->getCurrentLine(); // Save line with broken item.
                 $file->next();
                 continue;
             }

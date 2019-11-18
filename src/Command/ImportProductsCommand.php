@@ -37,6 +37,7 @@ class ImportProductsCommand extends Command
             ->setDescription('Import products from a file.')
             ->addArgument('path', InputArgument::REQUIRED, 'Path to the input file.')
             ->addOption('format', null, InputOption::VALUE_OPTIONAL, 'File format currently supports only "csv".')
+            ->addOption('test', null, InputOption::VALUE_NONE, 'Enable test mode.')
         ;
     }
 
@@ -78,7 +79,7 @@ class ImportProductsCommand extends Command
      */
     private function displayFailedLines(SymfonyStyle $io, array $failedLines)
     {
-        $io->title('Failed to parse below lines:');
+        $io->title('Failed to parse lines below:');
 
         foreach ($failedLines as $line) {
             $io->block( implode($failedLines));
