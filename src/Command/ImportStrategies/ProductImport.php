@@ -26,4 +26,7 @@ interface ProductImport
 
     /** Get lines of csv files with broken data */
     public function getFailedLines(): array;
+
+    /** Get total amount of items */
+    public function getTotal(): int;
 }

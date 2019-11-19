@@ -13,6 +13,7 @@ use Symfony\Component\Validator\Mapping\ClassMetadata;
  */
 class ProductData
 {
+    const FORMAT = 'Y-m-d';
     /**
      * @ORM\Id()
      * @ORM\GeneratedValue(strategy="IDENTITY")
@@ -143,9 +144,9 @@ class ProductData
         return $this;
     }
 
-    public function getDtmDiscontinued(): ?\DateTimeInterface
+    public function getDtmDiscontinued()
     {
-        return $this->dtmDiscontinued;
+        return $this->dtmDiscontinued ? $this->dtmDiscontinued->format(self::FORMAT) : null;
     }
 
     public function setDtmDiscontinued($dtmDiscontinued = null): self
@@ -165,5 +166,17 @@ class ProductData
         $this->stmTimestamp = $stmTimestamp;
 
         return $this;
+    }
+
+    public function __toString()
+    {
+        return implode(', ', [
+            $this->getStrProductCode(),
+            $this->getStrProductName(),
+            $this->getStrProductDesc(),
+            $this->getStock(),
+            $this->getCost(),
+            $this->getDtmDiscontinued()
+        ]);
     }
 }

@@ -69,6 +69,11 @@ class CsvProductImport implements ProductImport
         return $this->failedLines;
     }
 
+    public function getTotal(): int
+    {
+        return count($this->failedLines) + count($this->validatedProducts) + count($this->failedProducts);
+    }
+
     /**
      * Walk through the file and organize all products
      * to the $validatedProducts, $failedProducts
@@ -84,7 +89,7 @@ class CsvProductImport implements ProductImport
             $productArray = $this->parseLine($line);
 
             if (!$productArray) {
-                $this->failedLines []= $file->getCurrentLine(); // Save line with broken item.
+                $this->failedLines []= $line; // Save line with broken item.
                 $file->next();
                 continue;
             }

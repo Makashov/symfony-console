@@ -67,15 +67,16 @@ class ImportProductsCommand extends Command
             $this->import->loadProducts($path);
 
             $products = $this->import->getValidatedProducts();
-            $success = count($products);
-            $skipped = count($this->import->getFailedProducts());
+            $skipped = $this->import->getFailedProducts();
             $failedLines = $this->import->getFailedLines();
-            $total = $success + $skipped + count($failedLines);
+            $total = $this->import->getTotal();
 
             $this->io->text('Items found: ' . $total);
-            $this->io->text('Items stored: '. $success);
-            $this->io->text('Items skipped: ' . $skipped);
+            $this->io->text('Items stored: '. count($products));
+            $this->io->text('Items skipped: ' . count($skipped));
 
+            $this->displayStoredProducts($products);
+            $this->displayFailedProducts($skipped);
             $this->displayFailedLines($failedLines);
 
             $this->saveItems($products, $testMode);
@@ -102,6 +103,30 @@ class ImportProductsCommand extends Command
     }
 
     /**
+     * @param array $storedProducts
+     */
+    private function displayStoredProducts(array $storedProducts)
+    {
+        $this->io->title('Products below will be stored:');
+
+        foreach ($storedProducts as $line) {
+            $this->io->block($line);
+        }
+    }
+
+    /**
+     * @param array $storedProducts
+     */
+    private function displayFailedProducts(array $storedProducts)
+    {
+        $this->io->title('Products below will be skipped:');
+
+        foreach ($storedProducts as $line) {
+            $this->io->block($line);
+        }
+    }
+
+    /**
      * @param array $failedLines
      */
     private function displayFailedLines(array $failedLines)
@@ -109,7 +134,7 @@ class ImportProductsCommand extends Command
         $this->io->title('Failed to parse lines below:');
 
         foreach ($failedLines as $line) {
-            $this->io->block($line);
+            $this->io->block(implode(', ', $line));
         }
     }
 
